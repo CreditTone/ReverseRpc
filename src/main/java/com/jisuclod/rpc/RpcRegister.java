@@ -1,6 +1,7 @@
 package com.jisuclod.rpc;
 
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.List;
 
 public class RpcRegister {
@@ -14,6 +15,8 @@ public class RpcRegister {
 	public RpcRegister(Object instance) {
 		super();
 		this.instance = instance;
+		className = instance.getClass().getName();
+		methods = Arrays.asList(instance.getClass().getDeclaredMethods());
 	}
 
 	public String getClassName() {
@@ -22,6 +25,14 @@ public class RpcRegister {
 
 	public List<Method> getMethods() {
 		return methods;
+	}
+
+	public Object getInstance() {
+		return instance;
+	}
+
+	public void setInstance(Object instance) {
+		this.instance = instance;
 	}
 
 }

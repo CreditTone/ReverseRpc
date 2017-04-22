@@ -12,16 +12,19 @@ import com.alibaba.fastjson.JSON;
 public class MethodProxy implements InvocationHandler {
 	
 	private MethodInvokeHandler methodInvokeHandler;
+	
+	private Class targetCls;
 
-	public MethodProxy(MethodInvokeHandler methodInvokeHandler) {
+	public MethodProxy(Class targetCls,MethodInvokeHandler methodInvokeHandler) {
 		this.methodInvokeHandler = methodInvokeHandler;
+		this.targetCls = targetCls;
 	}
 
 
 
 	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 		MehtodInvoke invoke = new MehtodInvoke();
-		invoke.setClassName(proxy.getClass().getName());
+		invoke.setClassName(targetCls.getName());
 		invoke.setMethod(method.getName());
 		if (args != null && args.length > 0){
 			List<Object> params = new ArrayList<Object>();

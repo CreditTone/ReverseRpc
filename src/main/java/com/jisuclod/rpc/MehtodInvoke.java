@@ -5,16 +5,20 @@ import java.util.UUID;
 
 public final class MehtodInvoke {
 	
-	private final String id = UUID.randomUUID().toString();
+	private String id = UUID.randomUUID().toString();
 	
 	private String className;
 	
 	private String method;
 	
 	private List<Object> params;
-
+	
 	public String getId() {
 		return id;
+	}
+	
+	public void setId(String id) {
+		this.id = id;
 	}
 
 	public String getClassName() {
