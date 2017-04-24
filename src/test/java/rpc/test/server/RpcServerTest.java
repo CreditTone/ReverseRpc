@@ -26,6 +26,7 @@ public class RpcServerTest {
 		p.makelove();
 		System.out.println("让"+p.name()+"睡觉");
 		p.sleep();
+		s.returnIoSession(session);
 	}
 
 }
