@@ -10,6 +10,8 @@ import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 
 public class MethodInvokeHandler extends IoHandlerAdapter{
 	
@@ -57,7 +59,17 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
         	String retStr = JSON.toJSONString(response);
         	session.write(retStr);
     	}else{
-    		MehtodResponse mehtodResponse =  JSON.parseObject(message.toString(), MehtodResponse.class);
+    		JSONObject resultJson = JSON.parseObject(message.toString());
+    		Object result = resultJson.remove("result");
+    		MehtodResponse mehtodResponse = JSON.parseObject(resultJson.toString(), MehtodResponse.class); 
+    		if (result != null){
+    			if (result instanceof JSON){
+    				Class resultCls = Class.forName(mehtodResponse.getResultClass());
+    				mehtodResponse.setResult(JSON.parseObject(result.toString(), resultCls));
+    			}else{
+    				mehtodResponse.setResult(result);
+    			}
+    		}
     		resultQueue.add(mehtodResponse);
     	}
     }
@@ -80,6 +92,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
         		}else{
         			response.setResult(targetMethod.invoke(obj));
         		}
+    			response.setResultClass(response.getClass().getName());
     		}catch(Exception ex){
     			ex.printStackTrace();
     			response.setException(ex);
