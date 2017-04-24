@@ -25,12 +25,18 @@ public class MinaRpcClient {
 	private ConnectFuture future;
 	
 	private MethodInvokeHandler handler = new MethodInvokeHandler(rpcRegisteres);
+	
+	private InetSocketAddress addr;
+	
+	public MinaRpcClient(InetSocketAddress addr){
+		this.addr = addr;
+	}
 
 	public void registRpc(Class cls,Object obj) {
 		rpcRegisteres.put(cls.getName(), new RpcRegister(obj));
 	}
 
-	public void connect(InetSocketAddress addr) throws IOException {
+	public MinaRpcClient connect() throws IOException {
 		if (connector == null) {
 			connector = new NioSocketConnector();
 			// 设置连接超时检查时间
@@ -43,6 +49,7 @@ public class MinaRpcClient {
 			// 等待连接创建完成
 			future.awaitUninterruptibly();
 		}
+		return this;
 	}
 
 	public <T> T getServerProxy(Class<T> protocol) {

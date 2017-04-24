@@ -1,3 +1,4 @@
+package rpc.test.interfaces;
 
 public interface Person {
 	void makelove();

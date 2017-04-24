@@ -15,7 +15,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
 	
 	private Map<String,RpcRegister> rpcRegisteres = new HashMap<String, RpcRegister>();
 	
-	private IoSession session;
+	private LinkedBlockingQueue<IoSession>  sessions = new LinkedBlockingQueue<IoSession>();
 	
 	private LinkedBlockingQueue<MehtodResponse> resultQueue = new LinkedBlockingQueue<MehtodResponse>();
 	
@@ -23,15 +23,25 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
 		this.rpcRegisteres = rpcRegisteres;
 	}
 	
+	public LinkedBlockingQueue<IoSession> getSessions(){
+		return sessions;
+	}
+	
 	 /**
      * 连接创建事件
      */
     @Override
     public void sessionCreated(IoSession session){
-        this.session = session;
+    	sessions.add(session);
     }
     
+    
     @Override
+	public synchronized void sessionClosed(IoSession session) throws Exception {
+    	sessions.remove(session);
+	}
+
+	@Override
     public void exceptionCaught(IoSession session, Throwable cause) throws Exception {
         cause.printStackTrace();
     }
@@ -101,7 +111,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
 		return targetMethod;
 	}
     
-    public MehtodResponse invokeRemote(MehtodInvoke method){
+    public synchronized MehtodResponse invokeRemote(MehtodInvoke method,IoSession session){
     	String invokeJson = JSON.toJSONString(method);
 		session.write(invokeJson);
 		MehtodResponse response = null;

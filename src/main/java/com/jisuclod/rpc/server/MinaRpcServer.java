@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.mina.core.service.IoAcceptor;
 import org.apache.mina.core.session.IdleStatus;
+import org.apache.mina.core.session.IoSession;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
 import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
@@ -45,11 +46,18 @@ public class MinaRpcServer {
 	        // 启动监听线程
 	        acceptor.bind();
 		}
-		
 	}
 	
-	public <T> T getClientProxy(Class<T> protocol){
-		MethodProxy invocationHandler = new MethodProxy(protocol,handler);
+	public IoSession pollIoSession(){
+		return handler.getSessions().poll();
+	}
+	
+	public void returnIoSession(IoSession session){
+		handler.getSessions().add(session);
+	}
+	
+	public <T> T getClientProxy(Class<T> protocol,IoSession session){
+		MethodProxy invocationHandler = new MethodProxy(protocol,handler,session);
 		Object newProxyInstance = Proxy.newProxyInstance(protocol.getClassLoader(), new Class[] { protocol },
 				invocationHandler);
 		return (T) newProxyInstance;
