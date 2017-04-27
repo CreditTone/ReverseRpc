@@ -30,7 +30,7 @@ public class MinaRpcServer {
 		rpcRegisteres.put(cls.getName(), new RpcRegister(obj));
 	}
 	
-	public void start() throws IOException{
+	public void start(int port) throws IOException{
 		if (acceptor == null){
 			 // 创建服务端监控线程
 	        acceptor = new NioSocketAcceptor();
@@ -42,7 +42,7 @@ public class MinaRpcServer {
 	        // 指定业务逻辑处理器
 	        acceptor.setHandler(handler);
 	        // 设置端口号
-	        acceptor.bind(new InetSocketAddress(6488));
+	        acceptor.bind(new InetSocketAddress(port));
 	        // 启动监听线程
 	        acceptor.bind();
 		}
@@ -52,8 +52,14 @@ public class MinaRpcServer {
 		return handler.getSessions().poll();
 	}
 	
+	public IoSession takeIoSession() throws InterruptedException{
+		return handler.getSessions().take();
+	}
+	
 	public void returnIoSession(IoSession session){
-		handler.getSessions().add(session);
+		if (session.isConnected()){
+			handler.getSessions().add(session);
+		}
 	}
 	
 	public <T> T getClientProxy(Class<T> protocol,IoSession session){

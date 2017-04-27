@@ -36,18 +36,24 @@ public class MinaRpcClient {
 		rpcRegisteres.put(cls.getName(), new RpcRegister(obj));
 	}
 
-	public MinaRpcClient connect() throws IOException {
+	public MinaRpcClient connect() throws Exception{
 		if (connector == null) {
-			connector = new NioSocketConnector();
-			// 设置连接超时检查时间
-			connector.setConnectTimeoutCheckInterval(30);
-			connector.setHandler(handler);
-			connector.getFilterChain().addLast("codec", 
-	                new ProtocolCodecFilter(new TextLineCodecFactory(Charset.forName("UTF-8"))));
-			// 建立连接
-			future = connector.connect(addr);
-			// 等待连接创建完成
-			future.awaitUninterruptibly();
+			try{
+				connector = new NioSocketConnector();
+				// 设置连接超时检查时间
+				connector.setConnectTimeoutCheckInterval(3);
+				connector.setHandler(handler);
+				connector.getFilterChain().addLast("codec", 
+		                new ProtocolCodecFilter(new TextLineCodecFactory(Charset.forName("UTF-8"))));
+				// 建立连接
+				future = connector.connect(addr);
+				// 等待连接创建完成
+				future.awaitUninterruptibly();
+				future.getSession();
+			}catch(Exception e){
+				connector.dispose();
+				throw e;
+			}
 		}
 		return this;
 	}
@@ -57,5 +63,15 @@ public class MinaRpcClient {
 		Object newProxyInstance = Proxy.newProxyInstance(protocol.getClassLoader(), new Class[] { protocol },
 				invocationHandler);
 		return (T) newProxyInstance;
+	}
+	
+	public String getServerAddress(){
+		return future.getSession().getRemoteAddress().toString();
+	}
+	
+	public void quit(){
+		future.getSession().write("quit");
+		future.getSession().getCloseFuture().awaitUninterruptibly();
+		connector.dispose();
 	}
 }

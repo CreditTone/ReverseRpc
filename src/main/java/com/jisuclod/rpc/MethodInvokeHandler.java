@@ -46,6 +46,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
 	@Override
     public void exceptionCaught(IoSession session, Throwable cause) throws Exception {
         cause.printStackTrace();
+        session.closeNow();
     }
     
     /**
@@ -53,6 +54,10 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
      */
     @Override
     public void messageReceived(IoSession session, Object message) throws Exception {
+    	if (message.equals("quit")){
+    		session.closeNow();
+    		return;
+    	}
     	if (message.toString().contains("method")){
     		MehtodInvoke mehtodInvoke =  JSON.parseObject(message.toString(), MehtodInvoke.class);
         	MehtodResponse response  = invokeLocal(mehtodInvoke);
@@ -95,7 +100,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     			response.setResultClass(response.getClass().getName());
     		}catch(Exception ex){
     			ex.printStackTrace();
-    			response.setException(ex);
+    			response.setException(ex.getCause().toString());
     		}
     	}
     	return response;
@@ -107,9 +112,9 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     	int invokeParamsCount = method.getParams()==null?0:method.getParams().size();
     	Method targetMethod = null;
 		for (Method refMethod : rpcRe.getMethods()){
-    		if (refMethod.getName().equals(method.getMethod()) && refMethod.getParameterCount() == invokeParamsCount){
+    		if (refMethod.getName().equals(method.getMethod()) && refMethod.getParameterTypes().length == invokeParamsCount){
     			targetMethod = refMethod;
-    			for (int x = 0;x < refMethod.getParameterCount();x++) {
+    			for (int x = 0;x < refMethod.getParameterTypes().length;x++) {
     				Class cls = refMethod.getParameterTypes()[x];
     				if (!cls.getName().equals(method.getParams().get(x).getClass().getName())){
     					targetMethod = null;

@@ -8,7 +8,7 @@ public class MehtodResponse {
 	
 	private String resultClass;
 	
-	private Exception exception;
+	private String exception;
 
 	public String getId() {
 		return id;
@@ -26,11 +26,11 @@ public class MehtodResponse {
 		this.result = result;
 	}
 
-	public Exception getException() {
+	public String getException() {
 		return exception;
 	}
 
-	public void setException(Exception exception) {
+	public void setException(String exception) {
 		this.exception = exception;
 	}
 

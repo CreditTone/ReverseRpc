@@ -41,7 +41,7 @@ public class MethodProxy implements InvocationHandler {
 		}
 		MehtodResponse response = methodInvokeHandler.invokeRemote(invoke,session);
 		if (response.getException() != null){
-			throw response.getException();
+			throw new Exception(response.getException());
 		}
 		return response.getResult();
 	}
