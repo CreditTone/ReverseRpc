@@ -9,4 +9,5 @@ public interface Person {
 	void sleep();
 	
 	String name();
+	
 }

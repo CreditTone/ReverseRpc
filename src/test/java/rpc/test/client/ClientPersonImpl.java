@@ -1,5 +1,10 @@
 package rpc.test.client;
 
+
+import java.util.UUID;
+
+import javax.swing.plaf.FileChooserUI;
+
 import rpc.test.interfaces.Person;
 
 public class ClientPersonImpl implements Person{
@@ -19,5 +24,5 @@ public class ClientPersonImpl implements Person{
 	public String name() {
 		return "苍井空";
 	}
-
+	
 }

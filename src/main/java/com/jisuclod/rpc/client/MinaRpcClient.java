@@ -1,6 +1,5 @@
 package com.jisuclod.rpc.client;
 
-import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
 import java.nio.charset.Charset;

@@ -1,8 +1,12 @@
 package com.jisuclod.rpc;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.mina.core.service.IoHandlerAdapter;
@@ -10,16 +14,38 @@ import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 
-public class MethodInvokeHandler extends IoHandlerAdapter{
+public class MethodInvokeHandler extends IoHandlerAdapter {
 	
 	private Map<String,RpcRegister> rpcRegisteres = new HashMap<String, RpcRegister>();
 	
 	private LinkedBlockingQueue<IoSession>  sessions = new LinkedBlockingQueue<IoSession>();
 	
 	private LinkedBlockingQueue<MehtodResponse> resultQueue = new LinkedBlockingQueue<MehtodResponse>();
+	
+	private Map<String,List<String>> stringPart = new ConcurrentHashMap<String,List<String>>();
+
+	public void setStringPrat(String id, String part) {
+		List<String> partList = stringPart.get(id);
+		if (partList == null){
+			partList = new ArrayList<String>();
+			stringPart.put(id, partList);
+		}
+		partList.add(part);
+	}
+
+	public String getPratString(String id) {
+		List<String> partList = stringPart.remove(id);
+		if (partList != null){
+			StringBuilder builder = new StringBuilder();
+			for (String part : partList) {
+				builder.append(part);
+			}
+			return builder.toString();
+		}
+		return null;
+	}
 	
 	public MethodInvokeHandler(Map<String,RpcRegister> rpcRegisteres){
 		this.rpcRegisteres = rpcRegisteres;
@@ -58,9 +84,24 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     		session.closeNow();
     		return;
     	}
-    	if (message.toString().contains("method")){
+    	if (message.toString().startsWith("part ")){
+    		String id = message.toString().substring(5, 41);
+    		String partBody = message.toString().substring(42, message.toString().length());
+    		setStringPrat(id, partBody);
+    	}else if (message.toString().contains("method")){
     		MehtodInvoke mehtodInvoke =  JSON.parseObject(message.toString(), MehtodInvoke.class);
         	MehtodResponse response  = invokeLocal(mehtodInvoke);
+        	if (String.class.getName().equals(response.getResultClass())){
+        		String strRet = (String)response.getResult();
+        		if (strRet.length() >= 512){
+        			response.setResult("");
+        			List<String> partlist = Util.getPartList(strRet);
+        			for (String part : partlist) {
+        				String partWrite = "part "+ response.getId() + " " + part;
+        				session.write(partWrite);
+					}
+        		}
+        	}
         	String retStr = JSON.toJSONString(response);
         	session.write(retStr);
     	}else{
@@ -73,6 +114,10 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     				mehtodResponse.setResult(JSON.parseObject(result.toString(), resultCls));
     			}else{
     				mehtodResponse.setResult(result);
+    				String partBody = getPratString(mehtodResponse.getId());
+    				if (partBody != null) {
+    					mehtodResponse.setResult(partBody);
+    				}
     			}
     		}
     		resultQueue.add(mehtodResponse);
@@ -97,7 +142,9 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
         		}else{
         			response.setResult(targetMethod.invoke(obj));
         		}
-    			response.setResultClass(response.getClass().getName());
+    			if (response.getResult() != null){
+    				response.setResultClass(response.getResult().getClass().getName());
+    			}
     		}catch(Exception ex){
     			ex.printStackTrace();
     			response.setException(ex.getCause().toString());
