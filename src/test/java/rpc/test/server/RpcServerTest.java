@@ -10,7 +10,7 @@ public class RpcServerTest {
 
 	public static void main(String[] args) throws Exception {
 		MinaRpcServer s = new MinaRpcServer();
-		s.start(6488);
+		s.start(6588);
 		//模拟等待客户端连接进来,这时启动RpcClient
 		IoSession session = null;
 		while(session == null){

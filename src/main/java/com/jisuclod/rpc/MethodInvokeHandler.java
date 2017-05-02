@@ -102,6 +102,8 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     			ex.printStackTrace();
     			response.setException(ex.getCause().toString());
     		}
+    	}else{
+    		System.err.print("Not found method by name " + method.getMethod());
     	}
     	return response;
     }
@@ -115,7 +117,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     		if (refMethod.getName().equals(method.getMethod()) && refMethod.getParameterTypes().length == invokeParamsCount){
     			targetMethod = refMethod;
     			for (int x = 0;x < refMethod.getParameterTypes().length;x++) {
-    				Class cls = refMethod.getParameterTypes()[x];
+    				Class cls = getJavaBasicTypeClass(refMethod.getParameterTypes()[x]);
     				if (!cls.getName().equals(method.getParams().get(x).getClass().getName())){
     					targetMethod = null;
     					break;
@@ -149,4 +151,23 @@ public class MethodInvokeHandler extends IoHandlerAdapter{
     	return null;
     }
     
+    
+    private static Class getJavaBasicTypeClass(Class cls){
+    	switch(cls.getName()){
+    	case "int":
+    		return Integer.class;
+    	case "short":
+    		return Short.class;
+    	case "long":
+    		return Long.class;
+    	case "byte":
+    		return Byte.class;
+    	case "double":
+    		return Double.class;
+    	case "boolean":
+    		return Boolean.class;
+    	default:
+    		return cls;
+    	}
+    }
 }

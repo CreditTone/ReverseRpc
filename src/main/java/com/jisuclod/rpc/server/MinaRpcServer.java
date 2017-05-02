@@ -69,4 +69,16 @@ public class MinaRpcServer {
 		return (T) newProxyInstance;
 	}
 	
+	
+	public void stop(){
+		while(true){
+			IoSession session = handler.getSessions().poll();
+			if (session != null){
+				session.closeNow();
+				continue;
+			}
+			break;
+		}
+		acceptor.dispose();
+	}
 }
