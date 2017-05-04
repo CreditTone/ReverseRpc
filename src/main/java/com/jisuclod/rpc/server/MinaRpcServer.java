@@ -11,6 +11,8 @@ import org.apache.mina.core.service.IoAcceptor;
 import org.apache.mina.core.session.IdleStatus;
 import org.apache.mina.core.session.IoSession;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
+import org.apache.mina.filter.codec.serialization.ObjectSerializationCodecFactory;
+import org.apache.mina.filter.codec.textline.LineDelimiter;
 import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
 import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 
@@ -34,11 +36,12 @@ public class MinaRpcServer {
 		if (acceptor == null){
 			 // 创建服务端监控线程
 	        acceptor = new NioSocketAcceptor();
+	        ObjectSerializationCodecFactory objectSerializationCodecFactory = new ObjectSerializationCodecFactory();  
+	        objectSerializationCodecFactory.setDecoderMaxObjectSize(Integer.MAX_VALUE);  
+	        objectSerializationCodecFactory.setEncoderMaxObjectSize(Integer.MAX_VALUE);
+	        acceptor.getFilterChain().addLast("codec", new ProtocolCodecFilter(objectSerializationCodecFactory));
 	        acceptor.getSessionConfig().setReadBufferSize(2048);
 	        acceptor.getSessionConfig().setIdleTime(IdleStatus.BOTH_IDLE, 10);
-	        acceptor.getFilterChain().addLast(
-	                "codec",
-	                new ProtocolCodecFilter(new TextLineCodecFactory(Charset.forName("UTF-8"))));
 	        // 指定业务逻辑处理器
 	        acceptor.setHandler(handler);
 	        // 设置端口号

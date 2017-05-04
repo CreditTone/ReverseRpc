@@ -20,32 +20,11 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
 	
 	private Map<String,RpcRegister> rpcRegisteres = new HashMap<String, RpcRegister>();
 	
+	private Map<String,FileUploadRequest> files = new ConcurrentHashMap<String, FileUploadRequest>();
+	
 	private LinkedBlockingQueue<IoSession>  sessions = new LinkedBlockingQueue<IoSession>();
 	
 	private LinkedBlockingQueue<MehtodResponse> resultQueue = new LinkedBlockingQueue<MehtodResponse>();
-	
-	private Map<String,List<String>> stringPart = new ConcurrentHashMap<String,List<String>>();
-
-	public void setStringPrat(String id, String part) {
-		List<String> partList = stringPart.get(id);
-		if (partList == null){
-			partList = new ArrayList<String>();
-			stringPart.put(id, partList);
-		}
-		partList.add(part);
-	}
-
-	public String getPratString(String id) {
-		List<String> partList = stringPart.remove(id);
-		if (partList != null){
-			StringBuilder builder = new StringBuilder();
-			for (String part : partList) {
-				builder.append(part);
-			}
-			return builder.toString();
-		}
-		return null;
-	}
 	
 	public MethodInvokeHandler(Map<String,RpcRegister> rpcRegisteres){
 		this.rpcRegisteres = rpcRegisteres;
@@ -80,47 +59,57 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
      */
     @Override
     public void messageReceived(IoSession session, Object message) throws Exception {
+    	if (message instanceof FileUploadRequest){
+    		FileUploadRequest fur = (FileUploadRequest) message;
+    		files.put(fur.getId(), fur);
+    		return;
+    	}
     	if (message.equals("quit")){
     		session.closeNow();
     		return;
     	}
-    	if (message.toString().startsWith("part ")){
-    		String id = message.toString().substring(5, 41);
-    		String partBody = message.toString().substring(42, message.toString().length());
-    		setStringPrat(id, partBody);
-    	}else if (message.toString().contains("method")){
+    	if (message.toString().contains("method")){
     		MehtodInvoke mehtodInvoke =  JSON.parseObject(message.toString(), MehtodInvoke.class);
-        	MehtodResponse response  = invokeLocal(mehtodInvoke);
-        	if (String.class.getName().equals(response.getResultClass())){
-        		String strRet = (String)response.getResult();
-        		if (strRet.length() >= 512){
-        			response.setResult("");
-        			List<String> partlist = Util.getPartList(strRet);
-        			for (String part : partlist) {
-        				String partWrite = "part "+ response.getId() + " " + part;
-        				session.write(partWrite);
-					}
-        		}
-        	}
-        	String retStr = JSON.toJSONString(response);
+    		MehtodResponse response = null;
+    		try{
+    			response  = invokeLocal(mehtodInvoke);
+            	if ("[B".equals(response.getResultClass())){
+            		FileUploadRequest fur = new FileUploadRequest();
+            		fur.setBytes((byte[]) response.getResult());
+            		fur.setId(response.getId());
+            		session.write(fur);
+            		response.setResult("");
+            	}
+    		}catch(Exception e){
+    			e.printStackTrace();
+    			response = new MehtodResponse();
+    			response.setId(mehtodInvoke.getId());
+    			response.setException(e.getCause().toString());
+    		}
+    		String retStr = JSON.toJSONString(response);
         	session.write(retStr);
     	}else{
-    		JSONObject resultJson = JSON.parseObject(message.toString());
-    		Object result = resultJson.remove("result");
-    		MehtodResponse mehtodResponse = JSON.parseObject(resultJson.toString(), MehtodResponse.class); 
-    		if (result != null){
-    			if (result instanceof JSON){
-    				Class resultCls = Class.forName(mehtodResponse.getResultClass());
-    				mehtodResponse.setResult(JSON.parseObject(result.toString(), resultCls));
-    			}else{
-    				mehtodResponse.setResult(result);
-    				String partBody = getPratString(mehtodResponse.getId());
-    				if (partBody != null) {
-    					mehtodResponse.setResult(partBody);
-    				}
-    			}
+    		JSONObject resultJson = null;
+    		try{
+    			resultJson = JSON.parseObject(message.toString());
+    			Object result = resultJson.remove("result");
+        		MehtodResponse mehtodResponse = JSON.parseObject(resultJson.toString(), MehtodResponse.class);
+        		if (result != null){
+        			if (result instanceof JSON){
+        				Class resultCls = Class.forName(mehtodResponse.getResultClass());
+        				mehtodResponse.setResult(JSON.parseObject(result.toString(), resultCls));
+        			}else if (mehtodResponse.getResultClass().equals("[B")){
+        				byte[] body = files.get(mehtodResponse.getId()).getBytes();
+        				mehtodResponse.setResult(body);
+        			}else{
+        				mehtodResponse.setResult(result);
+        			}
+        		}
+        		resultQueue.add(mehtodResponse);
+    		}catch(Exception e){
+    			e.printStackTrace();
+    			System.out.println(message);
     		}
-    		resultQueue.add(mehtodResponse);
     	}
     }
 
@@ -129,7 +118,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
         //System.out.println("Server IDLE" + session.getIdleCount(status));
     }
     
-    public MehtodResponse invokeLocal(MehtodInvoke method){
+    public MehtodResponse invokeLocal(MehtodInvoke method) throws Exception{
     	Method targetMethod = findTargetMethod(method);
     	MehtodResponse response = new MehtodResponse();
     	response.setId(method.getId());
@@ -142,9 +131,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
         		}else{
         			response.setResult(targetMethod.invoke(obj));
         		}
-    			if (response.getResult() != null){
-    				response.setResultClass(response.getResult().getClass().getName());
-    			}
+    			response.setResultClass(targetMethod.getReturnType().getName());
     		}catch(Exception ex){
     			ex.printStackTrace();
     			response.setException(ex.getCause().toString());
@@ -155,7 +142,7 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
     	return response;
     }
 
-	protected Method findTargetMethod(MehtodInvoke method) {
+	protected Method findTargetMethod(MehtodInvoke method) throws Exception {
 		String className = method.getClassName();
 		RpcRegister rpcRe = rpcRegisteres.get(className);
     	int invokeParamsCount = method.getParams()==null?0:method.getParams().size();

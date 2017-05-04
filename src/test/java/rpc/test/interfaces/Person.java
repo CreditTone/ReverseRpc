@@ -8,6 +8,8 @@ public interface Person {
 	
 	void sleep();
 	
-	String name();
+	String name() throws Exception;
+	
+	public byte[] getAbc();
 	
 }

@@ -8,6 +8,8 @@ import java.util.Map;
 
 import org.apache.mina.core.future.ConnectFuture;
 import org.apache.mina.filter.codec.ProtocolCodecFilter;
+import org.apache.mina.filter.codec.serialization.ObjectSerializationCodecFactory;
+import org.apache.mina.filter.codec.textline.LineDelimiter;
 import org.apache.mina.filter.codec.textline.TextLineCodecFactory;
 import org.apache.mina.transport.socket.nio.NioSocketConnector;
 
@@ -41,9 +43,11 @@ public class MinaRpcClient {
 				connector = new NioSocketConnector();
 				// 设置连接超时检查时间
 				connector.setConnectTimeoutCheckInterval(3);
+				ObjectSerializationCodecFactory objectSerializationCodecFactory = new ObjectSerializationCodecFactory();  
+		        objectSerializationCodecFactory.setDecoderMaxObjectSize(Integer.MAX_VALUE);  
+		        objectSerializationCodecFactory.setEncoderMaxObjectSize(Integer.MAX_VALUE);
+		        connector.getFilterChain().addLast("codec", new ProtocolCodecFilter(objectSerializationCodecFactory));
 				connector.setHandler(handler);
-				connector.getFilterChain().addLast("codec", 
-		                new ProtocolCodecFilter(new TextLineCodecFactory(Charset.forName("UTF-8"))));
 				// 建立连接
 				future = connector.connect(addr);
 				// 等待连接创建完成
