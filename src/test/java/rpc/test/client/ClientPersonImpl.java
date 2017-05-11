@@ -28,7 +28,7 @@ public class ClientPersonImpl implements Person{
 	}
 
 	public String name() throws Exception{
-		throw new Exception("123");
+		return "123";
 	}
 
 	@SuppressWarnings("restriction")

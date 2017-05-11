@@ -170,19 +170,30 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
 		session.write(invokeJson);
 		MehtodResponse response = null;
 		try{
+			long startTime = System.currentTimeMillis();
 			while(true){
-				response = resultQueue.take();
-				if (response.getId().equals(method.getId())){
-					return response;
+				response = resultQueue.poll();
+				if (response != null){
+					if (response.getId().equals(method.getId())){
+						return response;
+					}else{
+						resultQueue.add(response);
+						Thread.sleep(1);
+					}
 				}else{
-					resultQueue.add(response);
-					Thread.sleep(1);
+					if ((startTime - System.currentTimeMillis()) > 1000 * 60){
+						throw new Exception("invoke method "+method.getMethod()+" timeout");
+					}
 				}
+				Thread.sleep(5);
 			}
 		}catch(Exception ex){
-			ex.printStackTrace();
+			//ex.printStackTrace();
+			response = new MehtodResponse();
+			response.setId(method.getId());
+			response.setException(ex.getCause().toString());
 		}
-    	return null;
+    	return response;
     }
     
     
