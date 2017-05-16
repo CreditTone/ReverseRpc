@@ -22,30 +22,52 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
 	
 	private Map<String,FileUploadRequest> files = new ConcurrentHashMap<String, FileUploadRequest>();
 	
-	private LinkedBlockingQueue<IoSession>  sessions = new LinkedBlockingQueue<IoSession>();
+	private Map<Long,IoSession>  sessions = new HashMap<Long,IoSession>();
 	
 	private LinkedBlockingQueue<MehtodResponse> resultQueue = new LinkedBlockingQueue<MehtodResponse>();
+	
+	private SessionListeer  listener;
 	
 	public MethodInvokeHandler(Map<String,RpcRegister> rpcRegisteres){
 		this.rpcRegisteres = rpcRegisteres;
 	}
 	
-	public LinkedBlockingQueue<IoSession> getSessions(){
+	public SessionListeer getListener() {
+		return listener;
+	}
+
+	public void setListener(SessionListeer listener) {
+		this.listener = listener;
+	}
+
+	public Map<Long, IoSession> getSessions() {
 		return sessions;
 	}
-	
-	 /**
+
+	/**
      * 连接创建事件
      */
     @Override
-    public void sessionCreated(IoSession session){
-    	sessions.add(session);
+    public void sessionCreated(final IoSession session){
+    	System.out.println("sessionCreated "+session.getId());
+    	sessions.put(session.getId(),session);
+    	if (listener != null){
+			new Thread(){
+				public void run() {
+					listener.onSessionCreated(session);
+				};
+			}.start();
+    	}
     }
     
     
     @Override
 	public synchronized void sessionClosed(IoSession session) throws Exception {
-    	sessions.remove(session);
+    	System.out.println("sessionClosed "+session.getId());
+    	sessions.remove(session.getId());
+    	if (listener != null){
+    		listener.onSessionDelete(session.getId());
+    	}
 	}
 
 	@Override
@@ -58,7 +80,11 @@ public class MethodInvokeHandler extends IoHandlerAdapter {
      * 消息接收事件
      */
     @Override
-    public void messageReceived(IoSession session, Object message) throws Exception {
+    public void messageReceived(final IoSession session, Object message) throws Exception {
+    	if (message instanceof RegistNotify){
+    		final RegistNotify notify = (RegistNotify) message;
+    		return;
+    	}
     	if (message instanceof FileUploadRequest){
     		FileUploadRequest fur = (FileUploadRequest) message;
     		files.put(fur.getId(), fur);

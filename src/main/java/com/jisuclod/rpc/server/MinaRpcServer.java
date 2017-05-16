@@ -19,6 +19,7 @@ import org.apache.mina.transport.socket.nio.NioSocketAcceptor;
 import com.jisuclod.rpc.MethodInvokeHandler;
 import com.jisuclod.rpc.MethodProxy;
 import com.jisuclod.rpc.RpcRegister;
+import com.jisuclod.rpc.SessionListeer;
 
 public class MinaRpcServer {
 	
@@ -51,18 +52,8 @@ public class MinaRpcServer {
 		}
 	}
 	
-	public IoSession pollIoSession(){
-		return handler.getSessions().poll();
-	}
-	
-	public IoSession takeIoSession() throws InterruptedException{
-		return handler.getSessions().take();
-	}
-	
-	public void returnIoSession(IoSession session){
-		if (session.isConnected()){
-			handler.getSessions().add(session);
-		}
+	public void setListener(SessionListeer listener) {
+		handler.setListener(listener);
 	}
 	
 	public <T> T getClientProxy(Class<T> protocol,IoSession session){
@@ -72,16 +63,11 @@ public class MinaRpcServer {
 		return (T) newProxyInstance;
 	}
 	
-	
 	public void stop(){
-		while(true){
-			IoSession session = handler.getSessions().poll();
-			if (session != null){
-				session.closeNow();
-				continue;
-			}
-			break;
+		for (IoSession session : handler.getSessions().values()) {
+			session.closeNow();
 		}
 		acceptor.dispose();
 	}
+
 }

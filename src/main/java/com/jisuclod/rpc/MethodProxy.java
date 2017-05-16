@@ -19,7 +19,7 @@ public class MethodProxy implements InvocationHandler {
 	public MethodProxy(Class targetCls,MethodInvokeHandler methodInvokeHandler) {
 		this.methodInvokeHandler = methodInvokeHandler;
 		this.targetCls = targetCls;
-		session = methodInvokeHandler.getSessions().peek();
+		session = (IoSession) new ArrayList(methodInvokeHandler.getSessions().values()).get(0);
 	}
 
 	public MethodProxy(Class targetCls,MethodInvokeHandler methodInvokeHandler,IoSession session) {

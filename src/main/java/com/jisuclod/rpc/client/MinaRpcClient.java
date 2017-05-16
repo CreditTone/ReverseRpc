@@ -15,7 +15,9 @@ import org.apache.mina.transport.socket.nio.NioSocketConnector;
 
 import com.jisuclod.rpc.MethodInvokeHandler;
 import com.jisuclod.rpc.MethodProxy;
+import com.jisuclod.rpc.RegistNotify;
 import com.jisuclod.rpc.RpcRegister;
+import com.jisuclod.rpc.SessionListeer;
 
 public class MinaRpcClient {
 
@@ -72,9 +74,17 @@ public class MinaRpcClient {
 		return future.getSession().getRemoteAddress().toString();
 	}
 	
+	public void setListener(SessionListeer listener) {
+		handler.setListener(listener);
+	}
+	
 	public void quit(){
-		future.getSession().write("quit");
-		future.getSession().getCloseFuture().awaitUninterruptibly();
-		connector.dispose();
+		try{
+			future.getSession().write("quit");
+			future.getSession().getCloseFuture().awaitUninterruptibly();
+			connector.dispose();
+		}catch(Exception e){
+			e.printStackTrace();
+		}
 	}
 }
